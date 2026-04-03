@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>순회점검</title>
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="순회점검">
+<meta name="theme-color" content="#f0a500">
+<link rel="manifest" id="mf">
+<script>
+const _mf={name:"순회점검 관리",short_name:"순회점검",start_url:".",display:"standalone",
+  background_color:"#0d1117",theme_color:"#f0a500",orientation:"portrait",
+  icons:[{src:"data:image/svg+xml,"+encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">'+
+    '<rect width="512" height="512" rx="80" fill="#0d1117"/>'+
+    '<rect x="40" y="40" width="432" height="432" rx="60" fill="#1c2330"/>'+
+    '<circle cx="256" cy="220" r="100" fill="none" stroke="#f0a500" stroke-width="36"/>'+
+    '<line x1="328" y1="295" x2="410" y2="390" stroke="#f0a500" stroke-width="36" stroke-linecap="round"/>'+
+    '</svg>'
+  ),sizes:"512x512",type:"image/svg+xml",purpose:"any maskable"}]};
+document.getElementById('mf').href=URL.createObjectURL(new Blob([JSON.stringify(_mf)],{type:'application/json'}));
+</script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+:root{
+  --bg:#0d1117; --s:#161b22; --card:#1c2330; --border:#2d3748;
+  --accent:#f0a500; --green:#22c55e; --red:#ef4444; --blue:#60a5fa;
+  --text:#e6edf3; --muted:#8b949e; --sub:#6e7681; --r:14px; --rs:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;background:var(--bg);font-family:'Noto Sans KR',sans-serif;color:var(--text);}
+#app{display:flex;flex-direction:column;height:100dvh;max-width:480px;margin:0 auto;}
+
+/* ── 헤더 ── */
+.hdr{background:var(--s);border-bottom:1px solid var(--border);padding:10px 14px 8px;flex-shrink:0;}
+.hdr-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.hdr h1{font-size:15px;font-weight:900;color:var(--accent);letter-spacing:-.3px;}
+.mbadge{font-size:10px;font-weight:700;padding:3px 11px;border-radius:20px;cursor:pointer;border:1px solid;}
+.mbadge.admin{background:rgba(240,165,0,.12);color:var(--accent);border-color:var(--accent);}
+.mbadge.user{background:rgba(34,197,94,.1);color:var(--green);border-color:var(--green);}
+.tabs{display:flex;gap:4px;}
+.tab{flex:1;padding:6px 0;border-radius:var(--rs);font-size:11px;font-weight:700;text-align:center;
+     cursor:pointer;border:none;background:var(--card);color:var(--muted);transition:all .18s;}
+.tab.on{background:var(--accent);color:#000;}
+
+/* ── 페이지 ── */
+.pg{display:none;flex:1;overflow-y:auto;}
+.pg.on{display:block;}
+
+/* ── 부서 그리드 ── */
+.dept-wrap{padding:10px 10px 0;background:var(--s);border-bottom:1px solid var(--border);}
+.dept-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding-bottom:10px;}
+.dbtn{padding:7px 3px;border-radius:var(--rs);font-size:10px;font-weight:700;text-align:center;
+      cursor:pointer;border:3px solid transparent;transition:all .15s;line-height:1.4;}
+.dbtn .dc{display:block;font-size:11px;font-weight:700;margin-top:1px;opacity:.85;}
+.dbtn.done{background:#052e16;color:#4ade80;border-color:#16a34a;}
+.dbtn.done .dc{color:#86efac;}
+.dbtn.notdone{background:#450a0a;color:#ff6b6b;border-color:#dc2626;}
+.dbtn.notdone .dc{color:#fca5a5;}
+.dbtn.on.done{background:#14532d;border-color:#4ade80;color:#fff;}
+.dbtn.on.done .dc{color:#bbf7d0;}
+.dbtn.on.notdone{background:#7f1d1d;border-color:#ff6b6b;color:#fff;}
+.dbtn.on.notdone .dc{color:#fecaca;}
+.dbtn.all{grid-column:span 3;padding:5px;}
+
+/* ── 아이템 스크롤 영역 ── */
+.item-scroll{overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:10px;}
+
+/* ── 핵심: 점검 카드 ── */
+.icard{background:var(--card);border-radius:var(--r);border:1px solid var(--border);overflow:hidden;}
+
+/* 카드 헤더: 부서+위치 */
+.icard-head{display:flex;align-items:center;gap:5px;padding:8px 12px 7px;overflow:hidden;}
+.icard-num{font-size:10px;font-weight:700;color:var(--muted);flex-shrink:0;}
+.dept-tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;flex-shrink:0;white-space:nowrap;}
+.icard-loc{font-size:12px;font-weight:700;flex-shrink:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.icard-htype{font-size:10px;color:var(--sub);flex-shrink:2;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.edit-ico{font-size:13px;cursor:pointer;color:var(--muted);flex-shrink:0;margin-left:auto;padding:2px 4px;}
+
+/* 사진 2칸 */
+.photo-row{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);}
+.photo-slot{background:var(--card);display:flex;flex-direction:column;}
+.photo-slot-lbl{font-size:10px;font-weight:700;padding:5px 8px;text-align:center;}
+.photo-slot-lbl.before{background:rgba(240,165,0,.12);color:var(--accent);}
+.photo-slot-lbl.after{background:rgba(34,197,94,.1);color:var(--green);}
+.photo-area{position:relative;width:100%;aspect-ratio:3/2;background:var(--bg);
+            display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;}
+.photo-area img{width:100%;height:100%;object-fit:cover;}
+.photo-area.empty{flex-direction:column;gap:4px;}
+.photo-area.empty .pi{font-size:28px;opacity:.3;}
+.photo-area.empty .pt{font-size:10px;color:var(--muted);}
+.photo-count-badge{position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,.72);
+                   color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;}
+.photo-upload-input{display:none;}
+/* 여러 장 미리보기 버튼 */
+.add-more-btn{font-size:10px;color:var(--muted);padding:5px;text-align:center;
+              border-top:1px solid var(--border);cursor:pointer;background:var(--s);}
+.add-more-btn:active{background:var(--border);}
+
+/* 위험요인 + 안전대책 */
+.info-section{padding:10px 12px 12px;}
+.info-row{display:flex;gap:6px;margin-bottom:6px;align-items:flex-start;}
+.info-row:last-child{margin-bottom:0;}
+.info-tag{font-size:9px;font-weight:700;padding:2px 6px;border-radius:6px;flex-shrink:0;margin-top:1px;white-space:nowrap;}
+.info-tag.hz{background:rgba(239,68,68,.15);color:var(--red);}
+.info-tag.ac{background:rgba(96,165,250,.15);color:var(--blue);}
+.info-text{font-size:12px;color:var(--text);line-height:1.55;flex:1;}
+.info-text.empty{color:var(--muted);font-style:italic;}
+
+/* ── 빈 상태 ── */
+.empty-state{text-align:center;padding:50px 20px;color:var(--muted);}
+.empty-state .ei{font-size:40px;margin-bottom:10px;}
+.empty-state p{font-size:12px;line-height:1.8;}
+
+/* ── FAB ── */
+.fab{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
+     width:calc(min(480px,100%) - 28px);background:var(--accent);color:#000;
+     border:none;border-radius:14px;padding:14px;font-size:13px;font-weight:900;
+     cursor:pointer;box-shadow:0 4px 24px rgba(240,165,0,.35);z-index:50;}
+.fab:active{opacity:.85;}
+
+/* ── 편집 모달 ── */
+.moverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;backdrop-filter:blur(3px);}
+.moverlay.on{display:flex;align-items:flex-end;justify-content:center;}
+.mbox{background:var(--s);border-radius:20px 20px 0 0;width:100%;max-width:480px;
+      max-height:94dvh;overflow-y:auto;padding-bottom:env(safe-area-inset-bottom);}
+.mhandle{width:32px;height:4px;background:var(--border);border-radius:2px;margin:10px auto 12px;}
+.mhead{padding:0 14px 10px;display:flex;align-items:center;justify-content:space-between;
+       border-bottom:1px solid var(--border);}
+.mtitle{font-size:14px;font-weight:900;}
+.mclose{background:var(--card);border:none;color:var(--muted);border-radius:50%;
+        width:28px;height:28px;font-size:15px;cursor:pointer;}
+.mbody{padding:12px 14px 16px;display:flex;flex-direction:column;gap:10px;}
+
+/* 모달 사진 2칸 */
+.mphotos{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.mphoto-col{display:flex;flex-direction:column;gap:0;}
+.mphoto-hdr{font-size:11px;font-weight:700;padding:5px 8px;border-radius:var(--rs) var(--rs) 0 0;
+            text-align:center;border:1px solid;}
+.mphoto-hdr.before{background:rgba(240,165,0,.12);color:var(--accent);border-color:rgba(240,165,0,.3);}
+.mphoto-hdr.after{background:rgba(34,197,94,.1);color:var(--green);border-color:rgba(34,197,94,.25);}
+.mphoto-body{border:1px solid var(--border);border-top:none;border-radius:0 0 var(--rs) var(--rs);padding:6px;display:flex;flex-direction:column;gap:4px;}
+.mphoto-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:3px;}
+.mphoto-thumb{position:relative;aspect-ratio:1;border-radius:6px;overflow:hidden;background:var(--border);}
+.mphoto-thumb img{width:100%;height:100%;object-fit:cover;}
+.mphoto-del{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.78);color:#fff;
+            border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;
+            display:flex;align-items:center;justify-content:center;}
+.mphoto-add{border:1.5px dashed var(--border);border-radius:var(--rs);padding:8px 6px;
+            display:flex;align-items:center;justify-content:center;gap:3px;cursor:pointer;
+            font-size:11px;color:var(--muted);}
+.mphoto-add:active{border-color:var(--accent);color:var(--accent);}
+
+/* 폼 */
+.field{display:flex;flex-direction:column;gap:4px;}
+.field label{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.2px;}
+.field input,.field textarea,.field select{
+  background:var(--card);border:1.5px solid var(--border);border-radius:var(--rs);
+  color:var(--text);font-family:'Noto Sans KR',sans-serif;font-size:13px;
+  padding:9px 10px;outline:none;transition:border-color .15s;width:100%;-webkit-appearance:none;}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--accent);}
+.field textarea{resize:none;line-height:1.6;}
+.field select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238b949e' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+              background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.sbtn{background:var(--accent);color:#000;border:none;border-radius:var(--r);
+      padding:13px;font-size:13px;font-weight:900;cursor:pointer;width:100%;}
+.sbtn:active{opacity:.85;}
+.dbtn-del{background:transparent;color:var(--red);border:1.5px solid var(--red);
+          border-radius:var(--r);padding:10px;font-size:12px;font-weight:700;cursor:pointer;width:100%;}
+
+/* 통계 */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;}
+.sc{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px;text-align:center;}
+.sn{font-size:26px;font-weight:900;}.sl{font-size:10px;color:var(--muted);margin-top:2px;}
+.dsr{background:var(--card);border:1px solid var(--border);border-radius:var(--rs);
+     padding:10px 12px;display:flex;align-items:center;gap:8px;margin-bottom:5px;}
+.dsn{font-size:12px;font-weight:700;width:62px;flex-shrink:0;}
+.dsbw{flex:1;background:var(--border);border-radius:3px;height:5px;overflow:hidden;}
+.dsb{height:100%;border-radius:3px;transition:width .4s;}
+.dsc{font-size:11px;font-weight:700;min-width:18px;text-align:right;}
+
+/* 설정 */
+.setsec{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:10px;}
+.setrow{padding:12px 13px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);}
+.setrow:last-child{border-bottom:none;}
+.setlbl{font-size:12px;font-weight:500;}
+.exbtn{border:none;border-radius:var(--r);padding:13px;font-size:13px;font-weight:900;cursor:pointer;width:100%;margin-bottom:7px;}
+
+/* 비번 */
+.pwov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:200;align-items:center;justify-content:center;}
+.pwov.on{display:flex;}
+.pwbox{background:var(--s);border-radius:var(--r);padding:22px;width:268px;border:1px solid var(--border);}
+.pwbox h2{font-size:14px;font-weight:900;color:var(--accent);margin-bottom:3px;}
+.pwbox p{font-size:11px;color:var(--muted);margin-bottom:11px;}
+.pwinp{width:100%;background:var(--card);border:1.5px solid var(--border);border-radius:var(--rs);
+       color:var(--text);font-size:20px;padding:9px;outline:none;letter-spacing:8px;text-align:center;}
+.pwinp:focus{border-color:var(--accent);}
+.pwbtns{display:flex;gap:6px;margin-top:10px;}
+.pwbtn{flex:1;padding:9px;border-radius:var(--rs);font-size:12px;font-weight:700;border:none;cursor:pointer;}
+.pwbtn.ok{background:var(--accent);color:#000;}
+.pwbtn.no{background:var(--card);color:var(--sub);}
+
+/* 토스트 */
+.toast{position:fixed;bottom:76px;left:50%;transform:translateX(-50%);
+       background:rgba(230,237,243,.95);color:#0d1117;border-radius:20px;padding:8px 16px;
+       font-size:11px;font-weight:700;opacity:0;transition:opacity .22s;pointer-events:none;z-index:999;white-space:nowrap;}
+.toast.on{opacity:1;}
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- 헤더 -->
+<div class="hdr">
+  <div class="hdr-top">
+    <h1>🔍 순회점검</h1>
+    <span class="mbadge admin" id="mbadge" onclick="toggleMode()">관리자</span>
+  </div>
+  <div class="tabs" id="tabs">
+    <button class="tab on" onclick="goTab('list')">점검목록</button>
+    <button class="tab" onclick="goTab('stats')">현황</button>
+    <button class="tab" onclick="goTab('settings')">설정</button>
+  </div>
+</div>
+
+<!-- 관리자: 점검목록 -->
+<div class="pg on" id="pg-list" style="display:flex;flex-direction:column;overflow:hidden;">
+  <div class="dept-wrap" id="dept-wrap"></div>
+  <div class="item-scroll" id="item-scroll" style="flex:1;padding-bottom:72px;"></div>
+</div>
+
+<!-- 관리자: 현황 -->
+<div class="pg" id="pg-stats" style="padding:10px;padding-bottom:20px;">
+  <div class="stat-grid">
+    <div class="sc"><div class="sn" id="s0" style="color:var(--accent)">0</div><div class="sl">전체 항목</div></div>
+    <div class="sc"><div class="sn" id="s1" style="color:var(--accent)">0</div><div class="sl">개선전 사진</div></div>
+    <div class="sc"><div class="sn" id="s2" style="color:var(--green)">0</div><div class="sl">개선후 사진</div></div>
+    <div class="sc"><div class="sn" id="s3" style="color:var(--blue)">0%</div><div class="sl">조치 완료율</div></div>
+  </div>
+  <div id="dept-stat-list"></div>
+</div>
+
+<!-- 관리자: 설정 -->
+<div class="pg" id="pg-settings" style="padding:10px;">
+  <div class="setsec">
+    <div class="setrow">
+      <span class="setlbl">📅 점검 월</span>
+      <input type="month" id="imonth" style="background:transparent;border:none;color:var(--sub);font-size:11px;outline:none;">
+    </div>
+    <div class="setrow" onclick="doClear()">
+      <span class="setlbl" style="color:var(--red)">🗑 전체 초기화</span>
+      <span style="color:var(--muted)">›</span>
+    </div>
+  </div>
+
+  <!-- 관리자 URL 안내 -->
+  <div style="background:#1a2a1a;border:2px solid #16a34a;border-radius:var(--r);padding:12px;margin-bottom:12px;">
+    <div style="font-size:11px;font-weight:700;color:#4ade80;margin-bottom:6px;">🔐 관리자 전용 URL</div>
+    <div id="admin-url-box" style="font-size:10px;color:#86efac;word-break:break-all;margin-bottom:8px;line-height:1.5;"></div>
+    <button onclick="copyAdminUrl()" style="background:#16a34a;color:#fff;border:none;border-radius:var(--rs);
+      padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer;width:100%;">
+      📋 관리자 URL 복사
+    </button>
+    <div style="font-size:10px;color:#6b7280;margin-top:6px;line-height:1.5;">
+      이 URL은 나만 사용하세요.<br>직원에게는 <b style="color:#94a3b8">?mode=admin 없는 URL</b>만 공유하세요.
+    </div>
+  </div>
+
+  <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;">📊 엑셀 출력</div>
+  <button class="exbtn" style="background:#16a34a;color:#fff;font-size:14px;" onclick="xlsxAll()">
+    📊 전체 엑셀 출력 (부서별 자동 분리)
+  </button>
+  <div class="setsec" style="margin-bottom:10px;">
+    <div style="padding:8px 13px;font-size:10px;color:var(--muted);border-bottom:1px solid var(--border);">부서별 개별 출력</div>
+    <div id="dept-export-rows"></div>
+  </div>
+
+  <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;">💾 데이터 백업</div>
+  <button class="exbtn" style="background:#0369a1;color:#fff" onclick="doExport()">📥 JSON 내보내기</button>
+  <label style="display:block">
+    <div class="exbtn" style="background:#374151;color:#fff">📤 JSON 불러오기</div>
+    <input type="file" accept=".json" style="display:none" onchange="doImport(event)">
+  </label>
+</div>
+
+<!-- 일반유저 화면 -->
+<div id="user-pg" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+  <div class="dept-wrap" id="user-dept-wrap"></div>
+  <div style="padding:8px 10px;background:var(--s);border-bottom:1px solid var(--border);">
+    <p style="font-size:11px;color:var(--muted);text-align:center;">📷 조치 완료 후 <b style="color:var(--green)">개선후</b> 사진을 각 항목에 올려주세요</p>
+  </div>
+  <div class="item-scroll" id="user-scroll" style="flex:1;padding-bottom:20px;"></div>
+</div>
+
+</div><!-- /app -->
+
+<!-- FAB -->
+<button class="fab" id="fab" onclick="openAdd()">＋ 점검 항목 추가</button>
+
+<!-- 편집 모달 -->
+<div class="moverlay" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="mbox">
+    <div class="mhandle"></div>
+    <div class="mhead">
+      <span class="mtitle" id="mtitle">새 점검 항목</span>
+      <button class="mclose" onclick="closeModal()">✕</button>
+    </div>
+    <div class="mbody">
+
+      <!-- 부서 + 위치 -->
+      <div class="frow">
+        <div class="field">
+          <label>부서</label>
+          <select id="f-dept">
+            <option value="">선택</option>
+            <option>지원</option><option>운영1</option><option>운영2</option>
+            <option>조리</option><option>BM</option><option>ES</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>위치</label>
+          <input type="text" id="f-loc" placeholder="예) B3F 창고">
+        </div>
+      </div>
+
+      <!-- 재해유형 -->
+      <div class="field">
+        <label>재해유형</label>
+        <select id="f-htype">
+          <option value="">선택하세요</option>
+          <optgroup label="▸ 물리적 충격">
+            <option>떨어짐 (추락)</option><option>넘어짐 (전도)</option>
+            <option>끼임 (협착)</option><option>맞음 (낙하·비래)</option>
+            <option>부딪힘 (충돌)</option><option>무너짐 (붕괴·도괴)</option>
+            <option>절단·베임·찔림</option>
+          </optgroup>
+          <optgroup label="▸ 에너지">
+            <option>감전</option><option>화재</option><option>폭발·파열</option>
+          </optgroup>
+          <optgroup label="▸ 화학·환경">
+            <option>유해·위험물질 누출·접촉</option><option>산소결핍</option>
+            <option>소음·진동</option><option>이상온도 접촉 (화상·동상)</option>
+          </optgroup>
+          <optgroup label="▸ 신체·기타">
+            <option>과부하 (근골격계)</option><option>교통사고 (구내)</option><option>기타</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <!-- 사진 2칸 -->
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px;">사진</div>
+        <div class="mphotos">
+          <div class="mphoto-col">
+            <div class="mphoto-hdr before">개선전</div>
+            <div class="mphoto-body">
+              <div class="mphoto-grid" id="mg-before"></div>
+              <div class="mphoto-add" onclick="document.getElementById('inp-before').click()">📷 추가</div>
+              <input type="file" id="inp-before" accept="image/*" multiple style="display:none" onchange="addPhotos(event,'before')">
+            </div>
+          </div>
+          <div class="mphoto-col">
+            <div class="mphoto-hdr after">개선후</div>
+            <div class="mphoto-body">
+              <div class="mphoto-grid" id="mg-after"></div>
+              <div class="mphoto-add" onclick="document.getElementById('inp-after').click()">📷 추가</div>
+              <input type="file" id="inp-after" accept="image/*" multiple style="display:none" onchange="addPhotos(event,'after')">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 위험요인 / 안전대책 -->
+      <div class="field">
+        <label>위험요인</label>
+        <textarea id="f-hz" rows="2" placeholder="위험요인을 입력하세요"></textarea>
+      </div>
+      <div class="field">
+        <label>안전대책</label>
+        <textarea id="f-ac" rows="2" placeholder="안전대책을 입력하세요"></textarea>
+      </div>
+
+      <button class="sbtn" onclick="saveItem()">💾 저장</button>
+      <button class="dbtn-del" id="delbtn" style="display:none" onclick="delItem()">🗑 항목 삭제</button>
+    </div>
+  </div>
+</div>
+
+<!-- 비번 모달 -->
+<div class="pwov" id="pwov">
+  <div class="pwbox">
+    <h2>🔐 관리자 전환</h2>
+    <p>비밀번호를 입력하세요</p>
+    <input type="password" class="pwinp" id="pwinp" maxlength="8" placeholder="••••"
+           onkeyup="if(event.key==='Enter')okPw()">
+    <div class="pwbtns">
+      <button class="pwbtn no" onclick="cancelPw()">취소</button>
+      <button class="pwbtn ok" onclick="okPw()">확인</button>
+    </div>
+  </div>
+</div>
+
+<!-- 홈화면 추가 안내 배너 -->
+<div id="install-banner" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+  width:calc(min(480px,100%) - 28px);background:#1c2330;border:1px solid #f0a500;border-radius:12px;
+  padding:11px 14px;z-index:200;display:none;align-items:center;gap:10px;box-shadow:0 4px 20px rgba(0,0,0,.5);">
+  <span style="font-size:22px">📲</span>
+  <div style="flex:1;min-width:0;">
+    <div style="font-size:12px;font-weight:700;color:#f1f5f9">홈 화면에 앱으로 추가</div>
+    <div style="font-size:10px;color:#8b949e;margin-top:1px">아이콘으로 바로 실행 가능</div>
+  </div>
+  <button onclick="installApp()" style="background:#f0a500;color:#000;border:none;border-radius:8px;
+    padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">추가</button>
+  <button onclick="document.getElementById('install-banner').style.display='none'" style="background:transparent;
+    border:none;color:#6b7280;font-size:16px;cursor:pointer;padding:2px;flex-shrink:0;">✕</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const DEPTS=['지원','운영1','운영2','조리','BM','ES'];
+const DC={'지원':'#6b7280','운영1':'#f0a500','운영2':'#f97316','조리':'#22c55e','BM':'#60a5fa','ES':'#a78bfa'};
+const PW='1234';
+
+let items   = JSON.parse(localStorage.getItem('insp4')||'[]');
+let curDept = '전체';
+let uDept   = '전체';
+let eidx    = -1;
+let cBefore = [], cAfter = [];
+
+// URL 파라미터로 초기 모드 결정
+// 관리자: ?mode=admin  /  일반: 파라미터 없음
+const _params = new URLSearchParams(location.search);
+let isAdmin = _params.get('mode') === 'admin';
+
+// init
+const n=new Date();
+document.getElementById('imonth').value=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;
+applyMode();
+renderAll();
+
+// ── 모드 ──────────────────────────────────────────────────────
+function toggleMode(){
+  if(isAdmin){
+    // 관리자 → 일반: URL에서 mode=admin 제거
+    isAdmin=false;
+    const url=new URL(location.href);
+    url.searchParams.delete('mode');
+    history.replaceState({},'',url);
+    applyMode();
+  } else {
+    // 일반 → 관리자: 비번 확인
+    document.getElementById('pwinp').value='';
+    document.getElementById('pwov').classList.add('on');
+    setTimeout(()=>document.getElementById('pwinp').focus(),80);
+  }
+}
+function okPw(){
+  if(document.getElementById('pwinp').value===PW){
+    document.getElementById('pwov').classList.remove('on');
+    isAdmin=true;
+    // URL에 mode=admin 추가
+    const url=new URL(location.href);
+    url.searchParams.set('mode','admin');
+    history.replaceState({},'',url);
+    applyMode();
+  }else{
+    const i=document.getElementById('pwinp');
+    i.style.borderColor='var(--red)';i.value='';
+    setTimeout(()=>i.style.borderColor='var(--border)',900);
+    toast('비밀번호 오류');
+  }
+}
+function cancelPw(){document.getElementById('pwov').classList.remove('on');}
+
+function applyMode(){
+  const b=document.getElementById('mbadge');
+  const tabs=document.getElementById('tabs');
+  const fab=document.getElementById('fab');
+  const pgList=document.getElementById('pg-list');
+  const userPg=document.getElementById('user-pg');
+
+  if(isAdmin){
+    b.textContent='관리자';b.className='mbadge admin';
+    tabs.style.display='flex';fab.style.display='block';
+    userPg.style.display='none';
+    document.querySelectorAll('.pg').forEach(p=>{p.style.display='';p.classList.remove('on');});
+    goTab('list');
+  }else{
+    b.textContent='일반';b.className='mbadge user';
+    tabs.style.display='none';fab.style.display='none';
+    document.querySelectorAll('.pg').forEach(p=>{p.style.display='none';p.classList.remove('on');});
+    userPg.style.display='flex';
+    renderUserView();
+  }
+}
+
+// ── 탭 ────────────────────────────────────────────────────────
+function goTab(t){
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('on',['list','stats','settings'][i]===t));
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
+  document.getElementById(`pg-${t}`).classList.add('on');
+  document.getElementById('fab').style.display=t==='list'?'block':'none';
+  if(t==='stats')renderStats();
+  if(t==='settings')updateAdminUrlBox();
+}
+
+// ── 전체 렌더 ─────────────────────────────────────────────────
+function renderAll(){renderDept();renderList();renderDeptExportRows();}
+
+// ── 부서 완료 여부 ────────────────────────────────────────────
+function deptStatus(d) {
+  // d='전체' or 부서명
+  const list = d==='전체' ? items : items.filter(i=>i.dept===d);
+  const total = list.length;
+  const done  = list.filter(i=>(i.after||[]).length>0).length;
+  return {total, done};
+}
+function deptClass(d, isOn) {
+  const {total, done} = deptStatus(d);
+  const completed = total===0 || done===total;
+  return `dbtn ${completed?'done':'notdone'} ${isOn?'on':''} ${d==='전체'?'all':''}`.trim();
+}
+
+// ── 부서 그리드 ───────────────────────────────────────────────
+function renderDept(){
+  const g=document.getElementById('dept-wrap');
+  const {total:at, done:ad} = deptStatus('전체');
+  g.innerHTML=`<div class="dept-grid">`+
+    `<div class="${deptClass('전체', curDept==='전체')}" onclick="selDept('전체')">전체<span class="dc">${ad}/${at}</span></div>`+
+    DEPTS.map(d=>{
+      const {total,done} = deptStatus(d);
+      return `<div class="${deptClass(d, curDept===d)}" onclick="selDept('${d}')">${d}<span class="dc">${done}/${total}</span></div>`;
+    }).join('')+`</div>`;
+}
+function selDept(d){curDept=d;renderDept();renderList();}
+
+// ── 점검 카드 렌더 ────────────────────────────────────────────
+function renderList(){
+  const el=document.getElementById('item-scroll');
+  const list=items.map((it,i)=>({it,i})).filter(({it})=>curDept==='전체'||it.dept===curDept);
+  if(!list.length){
+    el.innerHTML=`<div class="empty-state"><div class="ei">📋</div>
+      <p>${curDept==='전체'?'점검 항목이 없습니다.<br>＋ 버튼으로 추가하세요.':curDept+' 부서<br>항목이 없습니다.'}</p></div>`;
+    return;
+  }
+  el.innerHTML=list.map(({it,i})=>cardHTML(it,i)).join('');
+}
+
+function cardHTML(it,idx){
+  const dc=DC[it.dept]||'var(--muted)';
+  const bc=(it.before||[]).length, ac=(it.after||[]).length;
+
+  // 사진 슬롯
+  const bSrc=bc>0?it.before[0]:null;
+  const aSrc=ac>0?it.after[0]:null;
+
+  const bSlot=bSrc
+    ?`<div class="photo-area" onclick="openEdit(${idx})">
+        <img src="${bSrc}" loading="lazy">
+        ${bc>1?`<span class="photo-count-badge">+${bc}</span>`:''}
+      </div>`
+    :`<div class="photo-area empty" onclick="openEdit(${idx})">
+        <span class="pi">📷</span><span class="pt">없음</span>
+      </div>`;
+
+  const aSlot=aSrc
+    ?`<div class="photo-area">
+        <img src="${aSrc}" loading="lazy">
+        ${ac>1?`<span class="photo-count-badge">+${ac}</span>`:''}
+        <label style="position:absolute;inset:0;cursor:pointer;opacity:0;">
+          <input type="file" accept="image/*" multiple style="display:none" onchange="quickUpload(event,${idx},'after')">
+        </label>
+      </div>`
+    :`<label class="photo-area empty" style="cursor:pointer;">
+        <span class="pi" style="color:var(--green);opacity:.7">📷</span>
+        <span class="pt" style="color:var(--green)">탭하여 업로드</span>
+        <input type="file" accept="image/*" multiple style="display:none" onchange="quickUpload(event,${idx},'after')">
+      </label>`;
+
+  const hz=it.hazard||'<span style="color:var(--muted);font-style:italic">미입력</span>';
+  const ac2=it.action||'<span style="color:var(--muted);font-style:italic">미입력</span>';
+
+  return `<div class="icard">
+    <!-- 부서 + 위치 + 재해유형 한 줄 헤더 -->
+    <div class="icard-head">
+      <span class="icard-num">#${idx+1}</span>
+      <span class="dept-tag" style="background:${dc}1a;color:${dc}">${it.dept||'미지정'}</span>
+      <span class="icard-loc">${it.loc||'위치 미입력'}</span>
+      ${it.htype?`<span class="icard-htype">· ${it.htype}</span>`:''}
+      <span class="edit-ico" onclick="openEdit(${idx})">✏️</span>
+    </div>
+
+    <!-- 사진 2칸 -->
+    <div class="photo-row">
+      <div class="photo-slot">
+        <div class="photo-slot-lbl before">개선전</div>
+        ${bSlot}
+        <div class="add-more-btn" onclick="openEdit(${idx})">＋ 사진 관리</div>
+      </div>
+      <div class="photo-slot">
+        <div class="photo-slot-lbl after">개선후</div>
+        ${aSlot}
+        <label class="add-more-btn" style="cursor:pointer;">
+          ＋ 사진 추가
+          <input type="file" accept="image/*" multiple style="display:none" onchange="quickUpload(event,${idx},'after')">
+        </label>
+      </div>
+    </div>
+
+    <!-- 위험요인 + 안전대책 -->
+    <div class="info-section">
+      <div class="info-row">
+        <span class="info-tag hz">위험요인</span>
+        <span class="info-text">${hz}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-tag ac">안전대책</span>
+        <span class="info-text">${ac2}</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+// 빠른 업로드 (카드에서 바로)
+function quickUpload(e,idx,type){
+  compress(Array.from(e.target.files), imgs=>{
+    if(!items[idx][type]) items[idx][type]=[];
+    items[idx][type].push(...imgs);
+    save(); renderAll();
+    toast(`${type==='after'?'개선후':'개선전'} ${imgs.length}장 업로드`);
+  });
+  e.target.value='';
+}
+
+// ── 모달 ──────────────────────────────────────────────────────
+function openAdd(){
+  eidx=-1;cBefore=[];cAfter=[];
+  document.getElementById('mtitle').textContent='새 점검 항목';
+  document.getElementById('f-dept').value=curDept!=='전체'?curDept:'';
+  ['f-loc','f-hz','f-ac'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-htype').value='';
+  document.getElementById('delbtn').style.display='none';
+  renderMG('before');renderMG('after');
+  document.getElementById('modal').classList.add('on');
+}
+function openEdit(idx){
+  eidx=idx;const it=items[idx];
+  cBefore=[...(it.before||[])];cAfter=[...(it.after||[])];
+  document.getElementById('mtitle').textContent='항목 수정';
+  document.getElementById('f-dept').value=it.dept||'';
+  document.getElementById('f-loc').value=it.loc||'';
+  document.getElementById('f-htype').value=it.htype||'';
+  document.getElementById('f-hz').value=it.hazard||'';
+  document.getElementById('f-ac').value=it.action||'';
+  document.getElementById('delbtn').style.display='block';
+  renderMG('before');renderMG('after');
+  document.getElementById('modal').classList.add('on');
+}
+function closeModal(){document.getElementById('modal').classList.remove('on');}
+
+function renderMG(t){
+  const arr=t==='before'?cBefore:cAfter;
+  document.getElementById(`mg-${t}`).innerHTML=arr.map((p,i)=>
+    `<div class="mphoto-thumb">
+      <img src="${p}" loading="lazy">
+      <button class="mphoto-del" onclick="rmPhoto('${t}',${i})">✕</button>
+    </div>`).join('');
+}
+function rmPhoto(t,i){
+  if(t==='before')cBefore.splice(i,1);else cAfter.splice(i,1);
+  renderMG(t);
+}
+function addPhotos(e,t){
+  compress(Array.from(e.target.files),imgs=>{
+    if(t==='before')cBefore.push(...imgs);else cAfter.push(...imgs);
+    renderMG(t);toast(`${imgs.length}장 추가`);
+  });
+  e.target.value='';
+}
+
+function saveItem(){
+  const dept=document.getElementById('f-dept').value.trim();
+  const loc=document.getElementById('f-loc').value.trim();
+  if(!dept){toast('부서를 선택하세요');return;}
+  if(!loc){toast('위치를 입력하세요');return;}
+  const item={
+    dept,loc,
+    htype:document.getElementById('f-htype').value,
+    hazard:document.getElementById('f-hz').value.trim(),
+    action:document.getElementById('f-ac').value.trim(),
+    before:[...cBefore],after:[...cAfter],
+    ts:new Date().toISOString()
+  };
+  if(eidx>=0){items[eidx]=item;toast('수정되었습니다');}
+  else{items.push(item);toast('저장되었습니다');}
+  save();closeModal();renderAll();
+}
+function delItem(){
+  if(!confirm('삭제할까요?'))return;
+  items.splice(eidx,1);save();closeModal();renderAll();toast('삭제되었습니다');
+}
+function save(){localStorage.setItem('insp4',JSON.stringify(items));}
+
+// ── 이미지 압축 ────────────────────────────────────────────────
+function compress(files,cb){
+  const res=[];let done=0;
+  if(!files.length){cb([]);return;}
+  files.forEach(f=>{
+    const r=new FileReader();
+    r.onload=ev=>{
+      const img=new Image();
+      img.onload=()=>{
+        const c=document.createElement('canvas');
+        const max=1200;let w=img.width,h=img.height;
+        if(w>max||h>max){if(w>h){h=Math.round(h*max/w);w=max;}else{w=Math.round(w*max/h);h=max;}}
+        c.width=w;c.height=h;
+        c.getContext('2d').drawImage(img,0,0,w,h);
+        res.push(c.toDataURL('image/jpeg',.82));
+        if(++done===files.length)cb(res);
+      };
+      img.src=ev.target.result;
+    };
+    r.readAsDataURL(f);
+  });
+}
+
+// ── 일반유저 ──────────────────────────────────────────────────
+function renderUserView(){
+  // 부서 그리드
+  const g=document.getElementById('user-dept-wrap');
+  const {total:at,done:ad}=deptStatus('전체');
+  g.innerHTML=`<div class="dept-grid">`+
+    `<div class="${deptClass('전체',uDept==='전체')}" onclick="selUDept('전체')">전체<span class="dc">${ad}/${at}</span></div>`+
+    DEPTS.map(d=>{
+      const {total,done}=deptStatus(d);
+      return `<div class="${deptClass(d,uDept===d)}" onclick="selUDept('${d}')">${d}<span class="dc">${done}/${total}</span></div>`;
+    }).join('')+`</div>`;
+
+  // 항목 카드
+  const el=document.getElementById('user-scroll');
+  const list=items.map((it,i)=>({it,i})).filter(({it})=>uDept==='전체'||it.dept===uDept);
+  if(!list.length){
+    el.innerHTML=`<div class="empty-state"><div class="ei">📋</div><p>등록된 항목이 없습니다</p></div>`;
+    return;
+  }
+  const dc=d=>DC[d]||'var(--muted)';
+  el.innerHTML=list.map(({it,i})=>{
+    const bc=(it.before||[]).length,ac=(it.after||[]).length;
+    const bSrc=bc>0?it.before[0]:null;
+    const aSrc=ac>0?it.after[0]:null;
+    // 개선전: 클릭 불가 (뷰어만)
+    const bImg=bSrc
+      ?`<div class="photo-area"><img src="${bSrc}" loading="lazy">${bc>1?`<span class="photo-count-badge">+${bc}</span>`:''}</div>`
+      :`<div class="photo-area empty"><span class="pi" style="opacity:.3">📷</span><span class="pt">없음</span></div>`;
+    // 개선후: 업로드 가능
+    const aImg=aSrc
+      ?`<label class="photo-area" style="cursor:pointer;position:relative;">
+          <img src="${aSrc}" loading="lazy">${ac>1?`<span class="photo-count-badge">+${ac}</span>`:''}
+          <div style="position:absolute;inset:0;background:rgba(0,0,0,0);display:flex;align-items:flex-end;justify-content:flex-end;padding:4px;">
+            <span style="background:rgba(0,0,0,.6);color:#fff;font-size:9px;padding:2px 6px;border-radius:8px;">탭하여 변경</span>
+          </div>
+          <input type="file" accept="image/*" multiple style="display:none;position:absolute;inset:0;opacity:0;" onchange="uUpload(event,${i})">
+        </label>`
+      :`<label class="photo-area empty" style="cursor:pointer;background:#0d2210;">
+          <span class="pi" style="color:var(--green);font-size:32px;">📷</span>
+          <span class="pt" style="color:var(--green);font-weight:700;">탭하여 업로드</span>
+          <input type="file" accept="image/*" multiple style="display:none" onchange="uUpload(event,${i})">
+        </label>`;
+    // 개선후 업로드만 가능 - 완료 여부 표시
+    const isDone = ac > 0;
+    return `<div class="icard" style="border-color:${isDone?'rgba(34,197,94,.3)':'rgba(239,68,68,.25)'};">
+      <div class="icard-head">
+        <span class="dept-tag" style="background:rgba(240,165,0,.12);color:var(--accent)">${it.dept||'미지정'}</span>
+        <span class="icard-loc">${it.loc||'위치 미입력'}</span>
+        ${it.htype?`<span class="icard-htype">· ${it.htype}</span>`:''}
+        <span style="font-size:10px;font-weight:700;flex-shrink:0;margin-left:auto;color:${isDone?'var(--green)':'var(--red)'}">
+          ${isDone?'✅ 완료':'⚠ 미완료'}
+        </span>
+      </div>
+      <div class="photo-row">
+        <div class="photo-slot">
+          <div class="photo-slot-lbl before">개선전</div>
+          ${bImg}
+        </div>
+        <div class="photo-slot">
+          <div class="photo-slot-lbl after" style="background:${isDone?'rgba(34,197,94,.15)':'rgba(239,68,68,.12)'};color:${isDone?'var(--green)':'var(--red)'}">
+            개선후
+          </div>
+          ${aImg}
+          <label class="add-more-btn" style="cursor:pointer;color:var(--green);border-top:1px solid var(--border);">
+            📷 개선후 사진 추가
+            <input type="file" accept="image/*" multiple style="display:none" onchange="uUpload(event,${i})">
+          </label>
+        </div>
+      </div>
+      <div class="info-section">
+        <div class="info-row">
+          <span class="info-tag hz">위험요인</span>
+          <span class="info-text">${it.hazard||'<span style="color:var(--muted);font-style:italic">미입력</span>'}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-tag ac">안전대책</span>
+          <span class="info-text">${it.action||'<span style="color:var(--muted);font-style:italic">미입력</span>'}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function selUDept(d){uDept=d;renderUserView();}
+function uUpload(e,idx){
+  compress(Array.from(e.target.files),imgs=>{
+    if(!items[idx].after)items[idx].after=[];
+    items[idx].after.push(...imgs);
+    save();renderUserView();renderList();
+    toast(`개선후 ${imgs.length}장 업로드`);
+  });
+  e.target.value='';
+}
+
+// ── 통계 ──────────────────────────────────────────────────────
+function renderStats(){
+  const t=items.length;
+  const bc=items.reduce((s,i)=>s+(i.before||[]).length,0);
+  const ac=items.reduce((s,i)=>s+(i.after||[]).length,0);
+  const rate=t?Math.round(items.filter(i=>(i.after||[]).length>0).length/t*100):0;
+  document.getElementById('s0').textContent=t;
+  document.getElementById('s1').textContent=bc;
+  document.getElementById('s2').textContent=ac;
+  document.getElementById('s3').textContent=rate+'%';
+  const max=Math.max(...DEPTS.map(d=>items.filter(i=>i.dept===d).length),1);
+  document.getElementById('dept-stat-list').innerHTML=DEPTS.map(d=>{
+    const {total,done}=deptStatus(d);
+    const completed=total===0||done===total;
+    const col=completed?'var(--accent)':'var(--red)';
+    return `<div class="dsr">
+      <span class="dsn" style="color:${col}">${d}</span>
+      <div class="dsbw"><div class="dsb" style="width:${total?Math.round(done/total*100):100}%;background:${col}"></div></div>
+      <span class="dsc" style="color:${col}">${done}/${total}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── 관리자 URL ───────────────────────────────────────────────
+function getAdminUrl(){
+  const url=new URL(location.href);
+  url.searchParams.set('mode','admin');
+  return url.toString();
+}
+function copyAdminUrl(){
+  const u=getAdminUrl();
+  navigator.clipboard.writeText(u).then(()=>toast('관리자 URL 복사됨!')).catch(()=>{
+    // fallback
+    const t=document.createElement('textarea');
+    t.value=u; document.body.appendChild(t);
+    t.select(); document.execCommand('copy');
+    document.body.removeChild(t); toast('관리자 URL 복사됨!');
+  });
+}
+function updateAdminUrlBox(){
+  const el=document.getElementById('admin-url-box');
+  if(el) el.textContent=getAdminUrl();
+}
+
+// ── 엑셀 출력 ────────────────────────────────────────────────
+function renderDeptExportRows(){
+  const el=document.getElementById('dept-export-rows');
+  if(!el) return;
+  el.innerHTML=DEPTS.map(d=>{
+    const cnt=items.filter(i=>i.dept===d).length;
+    if(!cnt) return '';
+    return `<div class="setrow" onclick="xlsxDept('${d}')" style="cursor:pointer;border-top:1px solid var(--border);">
+      <span class="setlbl">${d} (${cnt}건)</span>
+      <span style="color:var(--muted)">›</span>
+    </div>`;
+  }).join('');
+}
+
+// SheetJS CDN 로드
+function loadSheetJS(cb){
+  if(window.XLSX){cb();return;}
+  const s=document.createElement('script');
+  s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  s.onload=cb; document.head.appendChild(s);
+}
+
+// 양식 구조에 맞춘 슬롯 정의 (아까 분석한 양식 기준)
+const SLOTS=[
+  {photoCol:'A', photoRow:4, loc:'B5',  htype:'D5',  hazard:'B6',  action:'B7'},
+  {photoCol:'F', photoRow:4, loc:'G5',  htype:'I5',  hazard:'G6',  action:'G7'},
+  {photoCol:'A', photoRow:11,loc:'B12', htype:'D12', hazard:'B13', action:'B14'},
+  {photoCol:'F', photoRow:11,loc:'G12', htype:'I12', hazard:'G13', action:'G14'},
+  {photoCol:'A', photoRow:18,loc:'B19', htype:'D19', hazard:'B20', action:'B21'},
+  {photoCol:'F', photoRow:18,loc:'G19', htype:'I19', hazard:'G20', action:'G21'},
+];
+
+function xlsxAll(){
+  const depts=DEPTS.filter(d=>items.some(i=>i.dept===d));
+  if(!depts.length){toast('출력할 항목이 없습니다');return;}
+  depts.forEach(d=>xlsxDept(d,false));
+  toast(`전체 ${depts.length}개 부서 출력 완료`);
+}
+
+function xlsxDept(dept, showToast=true){
+  const list=items.filter(i=>i.dept===dept);
+  if(!list.length){toast(dept+' 항목 없음');return;}
+  loadSheetJS(()=>{
+    const month=document.getElementById('imonth').value||'unknown';
+    const wb=XLSX.utils.book_new();
+    // 6개씩 시트 분할
+    const pages=[];
+    for(let i=0;i<list.length;i+=6) pages.push(list.slice(i,i+6));
+    pages.forEach((page,pi)=>{
+      const ws={};
+      // 각 슬롯에 데이터 채우기
+      page.forEach((it,si)=>{
+        if(si>=SLOTS.length) return;
+        const sl=SLOTS[si];
+        ws[sl.loc]   ={v:it.loc   ||'',t:'s'};
+        ws[sl.htype] ={v:it.htype ||'',t:'s'};
+        ws[sl.hazard]={v:it.hazard||'',t:'s'};
+        ws[sl.action]={v:it.action||'',t:'s'};
+      });
+      // 범위 설정
+      ws['!ref']='A1:N21';
+      // 행 높이 (양식 기준)
+      ws['!rows']=[
+        {hpt:90},  // 1
+        {hpt:26},  // 2
+        {hpt:26},  // 3
+        {hpt:150}, // 4 (사진행)
+        {hpt:26},  // 5
+        {hpt:26},  // 6
+        {hpt:26},  // 7
+        {hpt:26},  // 8
+        {hpt:26},  // 9
+        {hpt:26},  // 10
+        {hpt:150}, // 11 (사진행)
+        {hpt:26},  // 12
+        {hpt:26},  // 13
+        {hpt:26},  // 14
+        {hpt:26},  // 15
+        {hpt:26},  // 16
+        {hpt:26},  // 17
+        {hpt:150}, // 18 (사진행)
+        {hpt:26},  // 19
+        {hpt:26},  // 20
+        {hpt:26},  // 21
+      ];
+      const sheetName=pages.length>1?`${pi+1}페이지`:'점검결과';
+      XLSX.utils.book_append_sheet(wb,ws,sheetName);
+    });
+    const fname=`${dept}_순회점검_${month.replace('-','')}.xlsx`;
+    XLSX.writeFile(wb,fname);
+    if(showToast) toast(`${dept} 엑셀 출력 완료`);
+  });
+}
+
+// ── 내보내기 ──────────────────────────────────────────────────
+function doExport(){
+  const m=document.getElementById('imonth').value||'unknown';
+  const b=new Blob([JSON.stringify({month:m,items,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);
+  a.download=`순회점검_${m}.json`;a.click();toast('JSON 내보내기 완료');
+}
+function doImport(e){
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const d=JSON.parse(ev.target.result);
+      if(d.items&&confirm(`${d.month||''} 데이터 ${d.items.length}개 추가할까요?`)){
+        items=[...items,...d.items];save();renderAll();toast(`${d.items.length}개 불러왔습니다`);
+      }
+    }catch{toast('파일 형식 오류');}
+  };
+  r.readAsText(f);
+}
+function doClear(){
+  if(confirm('전체 초기화할까요?')){items=[];save();renderAll();toast('초기화 완료');}
+}
+
+// ── PWA 설치 ──────────────────────────────────────────────────
+let _installPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _installPrompt = e;
+  // 3초 후 배너 표시
+  setTimeout(() => {
+    const b = document.getElementById('install-banner');
+    if (b) b.style.display = 'flex';
+  }, 3000);
+});
+function installApp() {
+  document.getElementById('install-banner').style.display = 'none';
+  if (_installPrompt) {
+    _installPrompt.prompt();
+    _installPrompt.userChoice.then(r => {
+      if (r.outcome === 'accepted') toast('홈 화면에 추가됐습니다!');
+      _installPrompt = null;
+    });
+  } else {
+    // iOS 안내
+    toast('Safari → 공유 → 홈 화면에 추가');
+  }
+}
+window.addEventListener('appinstalled', () => toast('앱이 설치됐습니다! 🎉'));
+
+// ── 토스트 ────────────────────────────────────────────────────
+let _tt;
+function toast(m){
+  const el=document.getElementById('toast');
+  el.textContent=m;el.classList.add('on');
+  clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('on'),2000);
+}
+</script>
+</body>
+</html>
