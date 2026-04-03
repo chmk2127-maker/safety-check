@@ -10,6 +10,42 @@
 <meta name="apple-mobile-web-app-title" content="순회점검">
 <meta name="theme-color" content="#f0a500">
 <link rel="manifest" id="mf">
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+  import { getFirestore, collection, doc, setDoc, getDocs, onSnapshot, deleteDoc }
+    from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyASHC5rMkqC1cAxD9XpFhbGoUQjVUzZWGs",
+    authDomain: "safety-check-8dfa8.firebaseapp.com",
+    projectId: "safety-check-8dfa8",
+    storageBucket: "safety-check-8dfa8.firebasestorage.app",
+    messagingSenderId: "260284568519",
+    appId: "1:260284568519:web:2e26ff6a3dc38dcb5fffe2"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const COLL = 'inspection_items';
+
+  // Firestore → 로컬 동기화
+  window._fbReady = false;
+  window._db = db;
+  window._coll = COLL;
+  window._fsLib = { collection, doc, setDoc, getDocs, onSnapshot, deleteDoc };
+
+  // 실시간 리스너
+  onSnapshot(collection(db, COLL), (snapshot) => {
+    const data = [];
+    snapshot.forEach(d => data.push({id: d.id, ...d.data()}));
+    // id 기준 정렬
+    data.sort((a,b) => (a.order||0) - (b.order||0));
+    window._fbItems = data;
+    if (typeof window._onFbUpdate === 'function') window._onFbUpdate(data);
+  });
+  window._fbReady = true;
+</script>
 <script>
 const _mf={name:"순회점검 관리",short_name:"순회점검",start_url:".",display:"standalone",
   background_color:"#0d1117",theme_color:"#f0a500",orientation:"portrait",
@@ -428,22 +464,29 @@ const DEPTS=['지원','운영1','운영2','조리','BM','ES'];
 const DC={'지원':'#6b7280','운영1':'#f0a500','운영2':'#f97316','조리':'#22c55e','BM':'#60a5fa','ES':'#a78bfa'};
 const PW='1234';
 
-let items   = JSON.parse(localStorage.getItem('insp4')||'[]');
+let items   = [];
 let curDept = '전체';
 let uDept   = '전체';
 let eidx    = -1;
 let cBefore = [], cAfter = [];
 
-// URL 파라미터로 초기 모드 결정
-// 관리자: ?mode=admin  /  일반: 파라미터 없음
 const _params = new URLSearchParams(location.search);
 let isAdmin = _params.get('mode') === 'admin';
 
-// init
 const n=new Date();
 document.getElementById('imonth').value=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;
 applyMode();
-renderAll();
+
+// Firebase 실시간 업데이트 콜백
+window._onFbUpdate = function(data) {
+  items = data;
+  renderAll();
+  if(!isAdmin) renderUserView();
+};
+
+// 초기 로드 (Firebase 연결 전 로컬 캐시)
+const _cached = localStorage.getItem('insp4');
+if(_cached) { items = JSON.parse(_cached); renderAll(); }
 
 // ── 모드 ──────────────────────────────────────────────────────
 function toggleMode(){
@@ -706,7 +749,23 @@ function delItem(){
   if(!confirm('삭제할까요?'))return;
   items.splice(eidx,1);save();closeModal();renderAll();toast('삭제되었습니다');
 }
-function save(){localStorage.setItem('insp4',JSON.stringify(items));}
+function save(){
+  // 로컬 캐시
+  localStorage.setItem('insp4',JSON.stringify(items));
+  // Firestore 동기화
+  if(!window._db) return;
+  const {collection,doc,setDoc,getDocs,deleteDoc} = window._fsLib;
+  const db = window._db;
+  const coll = window._coll;
+  // 전체 덮어쓰기
+  getDocs(collection(db,coll)).then(snap=>{
+    snap.forEach(d=>deleteDoc(doc(db,coll,d.id)));
+    items.forEach((it,i)=>{
+      const id = it.id || `item_${Date.now()}_${i}`;
+      setDoc(doc(db,coll,id), {...it, id, order:i});
+    });
+  });
+}
 
 // ── 이미지 압축 ────────────────────────────────────────────────
 function compress(files,cb){
