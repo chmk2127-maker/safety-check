@@ -267,9 +267,9 @@ html,body{height:100%;background:var(--bg);font-family:'Noto Sans KR',sans-serif
 </div>
 
 <!-- 관리자: 점검목록 -->
-<div class="pg on" id="pg-list" style="display:flex;flex-direction:column;overflow:hidden;">
+<div class="pg on" id="pg-list" style="display:flex;flex-direction:column;min-height:0;">
   <div class="dept-wrap" id="dept-wrap"></div>
-  <div class="item-scroll" id="item-scroll" style="flex:1;padding-bottom:72px;"></div>
+  <div class="item-scroll" id="item-scroll" style="flex:1;min-height:0;overflow-y:auto;padding-bottom:72px;"></div>
 </div>
 
 <!-- 관리자: 현황 -->
@@ -327,7 +327,7 @@ html,body{height:100%;background:var(--bg);font-family:'Noto Sans KR',sans-serif
 </div>
 
 <!-- 일반유저 화면 -->
-<div id="user-pg" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+<div id="user-pg" style="display:none;flex-direction:column;flex:1;min-height:0;">
   <div class="dept-wrap" id="user-dept-wrap"></div>
   <div style="padding:8px 10px;background:var(--s);border-bottom:1px solid var(--border);">
     <p style="font-size:11px;color:var(--muted);text-align:center;">📷 조치 완료 후 <b style="color:var(--green)">개선후</b> 사진을 각 항목에 올려주세요</p>
