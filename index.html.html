@@ -83,8 +83,8 @@ html,body{height:100%;background:var(--bg);font-family:'Noto Sans KR',sans-serif
 .tab.on{background:var(--accent);color:#000;}
 
 /* ── 페이지 ── */
-.pg{display:none;flex:1;overflow-y:auto;}
-.pg.on{display:flex !important;flex-direction:column;}
+.pg{display:none;overflow:hidden;}
+.pg.on{display:flex;flex-direction:column;flex:1;min-height:0;}
 
 /* ── 부서 그리드 ── */
 .dept-wrap{padding:10px 10px 0;background:var(--s);border-bottom:1px solid var(--border);flex-shrink:0;}
@@ -268,7 +268,7 @@ html,body{height:100%;background:var(--bg);font-family:'Noto Sans KR',sans-serif
 <!-- 관리자: 점검목록 -->
 <div class="pg on" id="pg-list">
   <div class="dept-wrap" id="dept-wrap"></div>
-  <div class="item-scroll" id="item-scroll" style="flex:1;min-height:0;overflow-y:auto;padding-bottom:72px;"></div>
+  <div class="item-scroll" id="item-scroll" style="flex:1;min-height:0;padding-bottom:72px;"></div>
 </div>
 
 <!-- 관리자: 현황 -->
@@ -331,7 +331,7 @@ html,body{height:100%;background:var(--bg);font-family:'Noto Sans KR',sans-serif
   <div style="padding:8px 10px;background:var(--s);border-bottom:1px solid var(--border);">
     <p style="font-size:11px;color:var(--muted);text-align:center;">📷 조치 완료 후 <b style="color:var(--green)">개선후</b> 사진을 각 항목에 올려주세요</p>
   </div>
-  <div class="item-scroll" id="user-scroll" style="flex:1;min-height:0;overflow-y:auto;padding-bottom:20px;"></div>
+  <div class="item-scroll" id="user-scroll" style="flex:1;min-height:0;padding-bottom:20px;"></div>
 </div>
 
 </div><!-- /app -->
@@ -548,7 +548,7 @@ function applyMode(){
 function goTab(t){
   document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('on',['list','stats','settings'][i]===t));
   document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
-  const _pg=document.getElementById(`pg-${t}`);_pg.style.display='flex';_pg.classList.add('on');
+  const _el=document.getElementById(`pg-${t}`);_el.style.display='flex';_el.classList.add('on');
   document.getElementById('fab').style.display=t==='list'?'block':'none';
   if(t==='stats')renderStats();
   if(t==='settings')updateAdminUrlBox();
