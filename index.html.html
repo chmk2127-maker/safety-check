@@ -103,7 +103,7 @@ html,body{height:100%;background:var(--bg);font-family:'Noto Sans KR',sans-serif
 .dbtn.all{grid-column:span 3;padding:5px;}
 
 /* ── 아이템 스크롤 영역 ── */
-.item-scroll{overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:10px;}
+.item-scroll{overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:10px;min-height:0;}
 
 /* ── 핵심: 점검 카드 ── */
 .icard{background:var(--card);border-radius:var(--r);border:1px solid var(--border);overflow:hidden;}
@@ -266,7 +266,7 @@ html,body{height:100%;background:var(--bg);font-family:'Noto Sans KR',sans-serif
 </div>
 
 <!-- 관리자: 점검목록 -->
-<div class="pg on" id="pg-list" style="display:flex;flex-direction:column;min-height:0;">
+<div class="pg on" id="pg-list">
   <div class="dept-wrap" id="dept-wrap"></div>
   <div class="item-scroll" id="item-scroll" style="flex:1;min-height:0;overflow-y:auto;padding-bottom:72px;"></div>
 </div>
@@ -533,7 +533,7 @@ function applyMode(){
     b.textContent='관리자';b.className='mbadge admin';
     tabs.style.display='flex';fab.style.display='block';
     userPg.style.display='none';
-    document.querySelectorAll('.pg').forEach(p=>{p.style.display='';p.classList.remove('on');});
+    document.querySelectorAll('.pg').forEach(p=>{p.style.display='none';p.classList.remove('on');});
     goTab('list');
   }else{
     b.textContent='일반';b.className='mbadge user';
