@@ -84,7 +84,7 @@ html,body{height:100%;background:var(--bg);font-family:'Noto Sans KR',sans-serif
 
 /* ── 페이지 ── */
 .pg{display:none;flex:1;overflow-y:auto;}
-.pg.on{display:flex;flex-direction:column;}
+.pg.on{display:flex !important;flex-direction:column;}
 
 /* ── 부서 그리드 ── */
 .dept-wrap{padding:10px 10px 0;background:var(--s);border-bottom:1px solid var(--border);flex-shrink:0;}
@@ -548,7 +548,7 @@ function applyMode(){
 function goTab(t){
   document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('on',['list','stats','settings'][i]===t));
   document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
-  document.getElementById(`pg-${t}`).classList.add('on');
+  const _pg=document.getElementById(`pg-${t}`);_pg.style.display='flex';_pg.classList.add('on');
   document.getElementById('fab').style.display=t==='list'?'block':'none';
   if(t==='stats')renderStats();
   if(t==='settings')updateAdminUrlBox();
