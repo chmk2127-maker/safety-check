@@ -68,7 +68,7 @@ document.getElementById('mf').href=URL.createObjectURL(new Blob([JSON.stringify(
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;background:var(--bg);font-family:'Noto Sans KR',sans-serif;color:var(--text);}
-#app{display:flex;flex-direction:column;height:100dvh;max-width:480px;margin:0 auto;}
+#app{display:flex;flex-direction:column;min-height:100dvh;max-width:480px;margin:0 auto;}
 
 /* ── 헤더 ── */
 .hdr{background:var(--s);border-bottom:1px solid var(--border);padding:10px 14px 8px;flex-shrink:0;}
@@ -83,11 +83,11 @@ html,body{height:100%;background:var(--bg);font-family:'Noto Sans KR',sans-serif
 .tab.on{background:var(--accent);color:#000;}
 
 /* ── 페이지 ── */
-.pg{display:none;overflow:hidden;}
-.pg.on{display:flex;flex-direction:column;flex:1;min-height:0;}
+.pg{display:none;}
+.pg.on{display:block;}
 
 /* ── 부서 그리드 ── */
-.dept-wrap{padding:10px 10px 0;background:var(--s);border-bottom:1px solid var(--border);flex-shrink:0;}
+.dept-wrap{padding:10px 10px 0;background:var(--s);border-bottom:1px solid var(--border);}
 .dept-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding-bottom:10px;}
 .dbtn{padding:7px 3px;border-radius:var(--rs);font-size:10px;font-weight:700;text-align:center;
       cursor:pointer;border:3px solid transparent;transition:all .15s;line-height:1.4;}
@@ -103,7 +103,7 @@ html,body{height:100%;background:var(--bg);font-family:'Noto Sans KR',sans-serif
 .dbtn.all{grid-column:span 3;padding:5px;}
 
 /* ── 아이템 스크롤 영역 ── */
-.item-scroll{overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:10px;min-height:0;}
+.item-scroll{padding:10px;display:flex;flex-direction:column;gap:10px;}
 
 /* ── 핵심: 점검 카드 ── */
 .icard{background:var(--card);border-radius:var(--r);border:1px solid var(--border);overflow:hidden;}
@@ -266,9 +266,9 @@ html,body{height:100%;background:var(--bg);font-family:'Noto Sans KR',sans-serif
 </div>
 
 <!-- 관리자: 점검목록 -->
-<div class="pg on" id="pg-list">
+<div class="pg on" id="pg-list" style="display:flex;flex-direction:column;">
   <div class="dept-wrap" id="dept-wrap"></div>
-  <div class="item-scroll" id="item-scroll" style="flex:1;min-height:0;padding-bottom:72px;"></div>
+  <div class="item-scroll" id="item-scroll" style="flex:1;padding-bottom:72px;"></div>
 </div>
 
 <!-- 관리자: 현황 -->
@@ -326,12 +326,12 @@ html,body{height:100%;background:var(--bg);font-family:'Noto Sans KR',sans-serif
 </div>
 
 <!-- 일반유저 화면 -->
-<div id="user-pg" style="display:none;flex-direction:column;flex:1;min-height:0;">
+<div id="user-pg" style="display:none;flex-direction:column;">
   <div class="dept-wrap" id="user-dept-wrap"></div>
   <div style="padding:8px 10px;background:var(--s);border-bottom:1px solid var(--border);">
     <p style="font-size:11px;color:var(--muted);text-align:center;">📷 조치 완료 후 <b style="color:var(--green)">개선후</b> 사진을 각 항목에 올려주세요</p>
   </div>
-  <div class="item-scroll" id="user-scroll" style="flex:1;min-height:0;padding-bottom:20px;"></div>
+  <div class="item-scroll" id="user-scroll" style="flex:1;padding-bottom:20px;"></div>
 </div>
 
 </div><!-- /app -->
@@ -539,7 +539,7 @@ function applyMode(){
     b.textContent='일반';b.className='mbadge user';
     tabs.style.display='none';fab.style.display='none';
     document.querySelectorAll('.pg').forEach(p=>{p.style.display='none';p.classList.remove('on');});
-    userPg.style.display='flex';
+    userPg.style.display='flex';userPg.style.flexDirection='column';
     renderUserView();
   }
 }
@@ -548,7 +548,7 @@ function applyMode(){
 function goTab(t){
   document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('on',['list','stats','settings'][i]===t));
   document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
-  const _el=document.getElementById(`pg-${t}`);_el.style.display='flex';_el.classList.add('on');
+  const _pg=document.getElementById(`pg-${t}`);_pg.style.display='block';_pg.classList.add('on');
   document.getElementById('fab').style.display=t==='list'?'block':'none';
   if(t==='stats')renderStats();
   if(t==='settings')updateAdminUrlBox();
