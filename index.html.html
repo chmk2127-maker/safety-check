@@ -15,8 +15,6 @@
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
   import { getFirestore, collection, doc, setDoc, getDocs, onSnapshot, deleteDoc }
     from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
-  import { getAuth, signInAnonymously, onAuthStateChanged }
-    from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
 
   const firebaseConfig = {
     apiKey: "AIzaSyASHC5rMkqC1cAxD9XpFhbGoUQjVUzZWGs",
@@ -29,7 +27,6 @@
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
-  const auth = getAuth(app);
   const COLL = 'inspection_items';
 
   // Firestore → 로컬 동기화
@@ -38,21 +35,16 @@
   window._coll = COLL;
   window._fsLib = { collection, doc, setDoc, getDocs, onSnapshot, deleteDoc };
 
-  // 익명 인증 후에만 데이터베이스 접속 (외부에서 무단으로 접근/삭제하는 것을 막기 위함)
-  onAuthStateChanged(auth, (user) => {
-    if (!user) { signInAnonymously(auth).catch(err => console.error('인증 실패', err)); return; }
-
-    // 실시간 리스너 (인증 완료 후에만 연결)
-    onSnapshot(collection(db, COLL), (snapshot) => {
-      const data = [];
-      snapshot.forEach(d => data.push({id: d.id, ...d.data()}));
-      // id 기준 정렬
-      data.sort((a,b) => (a.order||0) - (b.order||0));
-      window._fbItems = data;
-      if (typeof window._onFbUpdate === 'function') window._onFbUpdate(data);
-    });
-    window._fbReady = true;
+  // 실시간 리스너
+  onSnapshot(collection(db, COLL), (snapshot) => {
+    const data = [];
+    snapshot.forEach(d => data.push({id: d.id, ...d.data()}));
+    // id 기준 정렬
+    data.sort((a,b) => (a.order||0) - (b.order||0));
+    window._fbItems = data;
+    if (typeof window._onFbUpdate === 'function') window._onFbUpdate(data);
   });
+  window._fbReady = true;
 </script>
 <script>
 const _mf={name:"순회점검 관리",short_name:"순회점검",start_url:".",display:"standalone",
@@ -689,7 +681,7 @@ function quickUpload(e,idx,type){
   compress(Array.from(e.target.files), imgs=>{
     if(!items[idx][type]) items[idx][type]=[];
     items[idx][type].push(...imgs);
-    save(); renderAll();
+    syncOne(items[idx]); renderAll();
     toast(`${type==='after'?'개선후':'개선전'} ${imgs.length}장 업로드`);
   });
   e.target.value='';
@@ -781,30 +773,41 @@ function saveItem(){
     before:[...cBefore],after:[...cAfter],
     ts:new Date().toISOString()
   };
-  if(eidx>=0){items[eidx]=item;toast('수정되었습니다');}
-  else{items.push(item);toast('저장되었습니다');}
-  save();closeModal();renderAll();
+  if(eidx>=0){
+    item.id=items[eidx].id||`item_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+    item.order=items[eidx].order!=null?items[eidx].order:eidx;
+    items[eidx]=item;
+    toast('수정되었습니다');
+  }else{
+    item.id=`item_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+    item.order=items.length;
+    items.push(item);
+    toast('저장되었습니다');
+  }
+  syncOne(item);
+  closeModal();renderAll();
 }
 function delItem(){
   if(!confirm('삭제할까요?'))return;
-  items.splice(eidx,1);save();closeModal();renderAll();toast('삭제되었습니다');
+  const it=items[eidx];
+  items.splice(eidx,1);
+  if(it) removeOne(it);
+  closeModal();renderAll();toast('삭제되었습니다');
 }
-function save(){
-  // 로컬 캐시
+// 항목 "1개"만 Firestore에 반영 (다른 기기가 갖고 있는 나머지 항목은 절대 건드리지 않음)
+function syncOne(item){
   localStorage.setItem('insp4',JSON.stringify(items));
-  // Firestore 동기화
   if(!window._db) return;
-  const {collection,doc,setDoc,getDocs,deleteDoc} = window._fsLib;
-  const db = window._db;
-  const coll = window._coll;
-  // 전체 덮어쓰기
-  getDocs(collection(db,coll)).then(snap=>{
-    snap.forEach(d=>deleteDoc(doc(db,coll,d.id)));
-    items.forEach((it,i)=>{
-      const id = it.id || `item_${Date.now()}_${i}`;
-      setDoc(doc(db,coll,id), {...it, id, order:i});
-    });
-  });
+  const {doc,setDoc}=window._fsLib;
+  setDoc(doc(window._db, window._coll, item.id), item)
+    .catch(err=>{console.error(err);toast('저장 중 오류 (네트워크 확인)');});
+}
+function removeOne(item){
+  localStorage.setItem('insp4',JSON.stringify(items));
+  if(!window._db||!item.id) return;
+  const {doc,deleteDoc}=window._fsLib;
+  deleteDoc(doc(window._db, window._coll, item.id))
+    .catch(err=>{console.error(err);toast('삭제 중 오류 (네트워크 확인)');});
 }
 
 // ── 이미지 압축 ────────────────────────────────────────────────
@@ -918,7 +921,7 @@ function uUpload(e,idx){
   compress(Array.from(e.target.files),imgs=>{
     if(!items[idx].after)items[idx].after=[];
     items[idx].after.push(...imgs);
-    save();renderUserView();renderList();
+    syncOne(items[idx]);renderUserView();renderList();
     toast(`개선후 ${imgs.length}장 업로드`);
   });
   e.target.value='';
@@ -1202,14 +1205,31 @@ function doImport(e){
     try{
       const d=JSON.parse(ev.target.result);
       if(d.items&&confirm(`${d.month||''} 데이터 ${d.items.length}개 추가할까요?`)){
-        items=[...items,...d.items];save();renderAll();toast(`${d.items.length}개 불러왔습니다`);
+        d.items.forEach((it,i)=>{
+          if(!it.id) it.id=`item_${Date.now()}_${i}_${Math.random().toString(36).slice(2,5)}`;
+          if(it.order==null) it.order=items.length+i;
+          items.push(it);
+          syncOne(it);
+        });
+        renderAll();
+        toast(`${d.items.length}개 불러왔습니다`);
       }
     }catch{toast('파일 형식 오류');}
   };
   r.readAsText(f);
 }
 function doClear(){
-  if(confirm('전체 초기화할까요?')){items=[];save();renderAll();toast('초기화 완료');}
+  if(!confirm(`전체 ${items.length}개 항목을 모두 삭제합니다. 되돌릴 수 없습니다. 계속할까요?`))return;
+  if(window._db){
+    const {collection,doc,getDocs,deleteDoc}=window._fsLib;
+    getDocs(collection(window._db, window._coll)).then(snap=>{
+      snap.forEach(d=>deleteDoc(doc(window._db, window._coll, d.id)));
+    });
+  }
+  items=[];
+  localStorage.setItem('insp4',JSON.stringify(items));
+  renderAll();
+  toast('초기화 완료');
 }
 
 // ── PWA 설치 ──────────────────────────────────────────────────
