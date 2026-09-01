@@ -491,7 +491,7 @@ window._onFbUpdate = function(data) {
 
 // 초기 로드 (Firebase 연결 전 로컬 캐시)
 const _cached = localStorage.getItem('insp4');
-if(_cached) { items = JSON.parse(_cached); renderAll(); }
+if(_cached) { items = JSON.parse(_cached); renderAll(); if(!isAdmin) renderUserView(); }
 
 // ── 모드 ──────────────────────────────────────────────────────
 function toggleMode(){
