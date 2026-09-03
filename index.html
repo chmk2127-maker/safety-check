@@ -7,8 +7,12 @@
 (function(){
   try{
     var u = new URL(location.href);
-    if(!u.searchParams.has('v')){
-      u.searchParams.set('v', Date.now());
+    var v = u.searchParams.get('v');
+    var now = Date.now();
+    // v가 없거나, 60초보다 오래된 값이면(=공유된 링크에 박제된 옛날 v) 새로 갱신.
+    // 같은 세션 안에서 방금 리다이렉트된 경우(60초 이내)는 다시 돌지 않도록 방지.
+    if(!v || (now - parseInt(v,10) > 60000) || isNaN(parseInt(v,10))){
+      u.searchParams.set('v', now);
       location.replace(u.toString());
     }
   }catch(e){}
@@ -968,7 +972,9 @@ function renderStats(){
 
 // ── 관리자 URL ───────────────────────────────────────────────
 function getAdminUrl(){
-  const url=new URL(location.href);
+  // location.href를 그대로 쓰면 지금 주소창의 v(캐시버스터) 값이 그대로 박제되어
+  // 이 URL이 나중에 오래된 버전으로 굳어버릴 수 있음 → v는 빼고 mode=admin만 새로 붙인다.
+  const url=new URL(location.origin+location.pathname);
   url.searchParams.set('mode','admin');
   return url.toString();
 }
