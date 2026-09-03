@@ -63,6 +63,10 @@
     data.sort((a,b) => (a.order||0) - (b.order||0));
     window._fbItems = data;
     if (typeof window._onFbUpdate === 'function') window._onFbUpdate(data);
+  }, (error) => {
+    // 예전엔 여기서 실패해도 화면에 아무 표시가 없었음 → 이제 원인을 바로 보여준다
+    console.error('Firestore 동기화 실패:', error);
+    if (typeof window._onFbError === 'function') window._onFbError(error);
   });
   window._fbReady = true;
 </script>
@@ -507,6 +511,18 @@ window._onFbUpdate = function(data) {
   items = data;
   renderAll();
   if(!isAdmin) renderUserView();
+};
+
+// Firebase 연결 실패 콜백 — 예전엔 조용히 실패해서 원인을 알 수 없었음.
+// 이제는 화면 맨 위에 빨간 배너로 에러 코드를 그대로 보여준다 (스크린샷 찍어서 공유하면 원인 파악 가능).
+window._onFbError = function(error){
+  const bar=document.createElement('div');
+  bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#7f1d1d;'+
+    'color:#fff;font-size:12px;padding:10px 14px;line-height:1.5;word-break:break-all;';
+  bar.innerHTML='⚠️ 데이터 연결 실패: <b>'+(error&&error.code||'unknown')+'</b><br>'+
+    (error&&error.message||'')+
+    '<br><span style="opacity:.8">이 화면을 캡쳐해서 관리자에게 보내주세요.</span>';
+  document.body.prepend(bar);
 };
 
 // 초기 로드 (Firebase 연결 전 로컬 캐시)
